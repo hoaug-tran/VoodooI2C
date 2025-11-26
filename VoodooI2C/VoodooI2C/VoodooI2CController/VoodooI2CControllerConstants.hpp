@@ -34,9 +34,10 @@
 #define kI2CPropFsHCntKey               "I2CFsHighCount"
 #define kI2CPropFsLCntKey               "I2CFsLowCount"
 
+// Enables Intel LPSS registers in VoodooI2CACPIControllers
+#define kI2CPropIntelLpssKey            "I2CLegacyIntelLpss"
+// AMD Interrupt Status Quirk
 #define kI2CPropMaskQuirkKey            "AccessIntrMaskWorkaround"
-
-#define LPSS_PRIVATE_CLOCK_GATING       0x800
 
 #define DW_IC_CON_MASTER                0x1
 #define DW_IC_CON_SPEED_STD             0x2
