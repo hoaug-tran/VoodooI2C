@@ -27,6 +27,15 @@
 #define DSM_SUPPORT_INDEX 0
 #define HIDG_DESC_INDEX 1
 #define TP7G_RESOURCES_INDEX 1
+#define VOODOO_I2C_TRANSFER_TO_ADDRESS "VoodooI2CTransferToAddress"
+
+struct VoodooI2CAddressedTransfer {
+    UInt8 address;
+    UInt8 *writeBuffer;
+    UInt16 writeLength;
+    UInt8 *readBuffer;
+    UInt16 readLength;
+};
 
 class VoodooI2CControllerDriver;
 
@@ -193,6 +202,13 @@ class EXPORT VoodooI2CDeviceNub : public IOService {
 
     IOReturn getDeviceResourcesDSM(UInt32 index, OSObject **result);
 
+    IOReturn callPlatformFunction(const OSSymbol *functionName,
+                                  bool waitForFunction,
+                                  void *param1,
+                                  void *param2,
+                                  void *param3,
+                                  void *param4) override;
+
  private:
     IOACPIPlatformDevice* acpi_device;
     IOCommandGate* command_gate;
@@ -284,6 +300,9 @@ class EXPORT VoodooI2CDeviceNub : public IOService {
      */
 
     IOReturn writeReadI2CGated(UInt8* write_buffer, UInt16* write_length, UInt8* read_buffer, UInt16* read_length);
+
+    // Debug bridge for devices that need more than one I2C address.
+    IOReturn transferI2CToAddress(VoodooI2CAddressedTransfer *request);
 
     /* Check if a boot-arg is present
      *

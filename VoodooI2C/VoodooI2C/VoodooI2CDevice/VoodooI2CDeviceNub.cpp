@@ -419,3 +419,60 @@ IOReturn VoodooI2CDeviceNub::writeReadI2CGated(UInt8* write_buffer, UInt16* writ
     };
     return controller->transferI2C(msgs, 2);
 }
+
+IOReturn VoodooI2CDeviceNub::callPlatformFunction(const OSSymbol *functionName,
+                                                  bool waitForFunction,
+                                                  void *param1,
+                                                  void *param2,
+                                                  void *param3,
+                                                  void *param4) {
+    if (functionName && functionName->isEqualTo(VOODOO_I2C_TRANSFER_TO_ADDRESS)) {
+        return transferI2CToAddress(static_cast<VoodooI2CAddressedTransfer *>(param1));
+    }
+
+    return super::callPlatformFunction(functionName, waitForFunction, param1, param2, param3, param4);
+}
+
+IOReturn VoodooI2CDeviceNub::transferI2CToAddress(VoodooI2CAddressedTransfer *request) {
+    if (!request || request->address > 0x7F) {
+        return kIOReturnBadArgument;
+    }
+
+    bool hasWrite = request->writeBuffer && request->writeLength > 0;
+    bool hasRead = request->readBuffer && request->readLength > 0;
+
+    if (!hasWrite && !hasRead) {
+        return kIOReturnBadArgument;
+    }
+
+    UInt16 flags = use_10bit_addressing ? I2C_M_TEN : 0;
+    UInt16 readFlags = flags | I2C_M_RD;
+
+    if (hasWrite && hasRead) {
+        VoodooI2CControllerBusMessage msgs[] = {
+            {
+                .address = request->address,
+                .buffer = request->writeBuffer,
+                .flags = flags,
+                .length = request->writeLength,
+            },
+            {
+                .address = request->address,
+                .buffer = request->readBuffer,
+                .flags = readFlags,
+                .length = request->readLength,
+            }
+        };
+        return controller->transferI2C(msgs, 2);
+    }
+
+    VoodooI2CControllerBusMessage msg = {
+        .address = request->address,
+        .buffer = hasWrite ? request->writeBuffer : request->readBuffer,
+        .flags = hasWrite ? flags : readFlags,
+        .length = hasWrite ? request->writeLength : request->readLength,
+    };
+
+    return controller->transferI2C(&msg, 1);
+}
+
