@@ -228,6 +228,7 @@ void VoodooI2CControllerDriver::handleAbortI2C() {
         IOLog("%s::%s lost arbitration\n", getName(), bus_device.name);
 
     IOLog("%s::%s I2C Transaction error: 0x%08x - aborting\n", getName(), bus_device.name, bus_device.abort_source);
+    setProperty("DBG_TX_ABRT_SOURCE", bus_device.abort_source, 32);
 }
 
 void VoodooI2CControllerDriver::handleInterrupt(OSObject* target, void* refCon, IOService* nubDevice, int source) {
@@ -444,7 +445,6 @@ UInt32 VoodooI2CControllerDriver::readClearInterruptBits() {
         readRegister(DW_IC_CLR_RD_REQ);
     if (stat & DW_IC_INTR_TX_ABRT) {
         bus_device.abort_source = readRegister(DW_IC_TX_ABRT_SOURCE);
-        setProperty("DBG_TX_ABRT_SOURCE", bus_device.abort_source, 32);
         readRegister(DW_IC_CLR_TX_ABRT);
     }
     if (stat & DW_IC_INTR_RX_DONE)
