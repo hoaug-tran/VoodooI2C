@@ -202,6 +202,7 @@ IOReturn VoodooI2CControllerDriver::setBusConfigProperties() {
 }
 
 void VoodooI2CControllerDriver::handleAbortI2C() {
+    IOLog("%s::%s handleAbort entered\n", getName(), bus_device.name);
     IOLog("%s::%s I2C Transaction error details\n", getName(), bus_device.name);
 
     if (bus_device.abort_source & DW_IC_TX_ABRT_7B_ADDR_NOACK)
@@ -309,6 +310,7 @@ IOReturn VoodooI2CControllerDriver::initialiseBus() {
 }
 
 IOReturn VoodooI2CControllerDriver::prepareTransferI2C(VoodooI2CControllerBusMessage* messages, int* number) {
+    IOLog("%s::%s prepareTransfer entered\n", getName(), bus_device.name);
     AbsoluteTime abstime, deadline;
     IOReturn sleep;
 
@@ -728,6 +730,7 @@ IOReturn VoodooI2CControllerDriver::transferI2C(VoodooI2CControllerBusMessage* m
         setProperty("VoodooI2C_Driver_transferI2C_Fail", "NoCommandGate");
         return kIOReturnNotReady;
     }
+    IOLog("%s::%s VoodooI2C transferI2C entered\n", getName(), bus_device.name);
     IOLockLock(i2c_bus_lock);
     IOReturn ret = command_gate->runAction(OSMemberFunctionCast(IOCommandGate::Action, this, &VoodooI2CControllerDriver::transferI2CGated), messages, &number);
     IOLockUnlock(i2c_bus_lock);
@@ -737,6 +740,7 @@ IOReturn VoodooI2CControllerDriver::transferI2C(VoodooI2CControllerBusMessage* m
 
 IOReturn VoodooI2CControllerDriver::transferI2CGated(VoodooI2CControllerBusMessage* messages, int* number) {
     setProperty("VoodooI2C_Driver_transferI2CGated_Entered", kOSBooleanTrue);
+    IOLog("%s::%s transferI2CGated entered\n", getName(), bus_device.name);
     IOReturn ret;
     int tries;
 
