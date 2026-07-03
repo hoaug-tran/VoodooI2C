@@ -431,6 +431,7 @@ IOReturn VoodooI2CDeviceNub::callPlatformFunction(const OSSymbol *functionName,
     }
 
     if (functionName && functionName->isEqualTo(VOODOO_I2C_TRANSFER_TO_ADDRESS)) {
+        IOLog("%s::%s callPlatformFunction matched VOODOO_I2C_TRANSFER_TO_ADDRESS\n", getName(), name);
         setProperty("VoodooI2C_TransferMatched", kOSBooleanTrue);
         return transferI2CToAddress(static_cast<VoodooI2CAddressedTransfer *>(param1));
     }
@@ -462,6 +463,7 @@ IOReturn VoodooI2CDeviceNub::callPlatformFunction(const char *functionName,
 }
 
 IOReturn VoodooI2CDeviceNub::transferI2CToAddress(VoodooI2CAddressedTransfer *request) {
+    IOLog("%s::%s transferI2CToAddress entered for address 0x%02X\n", getName(), name, request ? request->address : 0);
     setProperty("VoodooI2C_EnteredTransfer", kOSBooleanTrue);
 
     if (!request || request->address > 0x7F) {

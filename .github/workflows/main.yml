@@ -47,8 +47,6 @@ jobs:
 
     - name: Build Debug VoodooI2C
       run: xcodebuild -workspace VoodooI2C.xcworkspace -scheme VoodooI2C -derivedDataPath build -jobs 1 -configuration Debug
-    - name: Build Release VoodooI2C
-      run: xcodebuild -workspace VoodooI2C.xcworkspace -scheme VoodooI2C -derivedDataPath build -jobs 1 -configuration Release
 
     - name: Generate Release Description
       if: github.event_name == 'release'
