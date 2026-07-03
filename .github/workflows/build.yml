@@ -11,6 +11,9 @@ jobs:
   build:
     name: Build on macOS
     runs-on: macos-latest
+    env:
+      PROJECT_TYPE: KEXT
+      JOB_TYPE: BUILD
 
     steps:
       - name: Checkout repository
