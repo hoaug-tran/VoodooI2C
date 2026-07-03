@@ -444,6 +444,7 @@ UInt32 VoodooI2CControllerDriver::readClearInterruptBits() {
         readRegister(DW_IC_CLR_RD_REQ);
     if (stat & DW_IC_INTR_TX_ABRT) {
         bus_device.abort_source = readRegister(DW_IC_TX_ABRT_SOURCE);
+        setProperty("DBG_TX_ABRT_SOURCE", bus_device.abort_source, 32);
         readRegister(DW_IC_CLR_TX_ABRT);
     }
     if (stat & DW_IC_INTR_RX_DONE)
@@ -558,6 +559,11 @@ void VoodooI2CControllerDriver::requestTransferI2C() {
     toggleInterrupts(kVoodooI2CStateOff);
 
     toggleBusState(kVoodooI2CStateOn);
+
+    setProperty("DBG_ENABLE", readRegister(DW_IC_ENABLE), 32);
+    setProperty("DBG_ENABLE_STATUS", readRegister(DW_IC_ENABLE_STATUS), 32);
+    setProperty("DBG_STATUS", readRegister(DW_IC_STATUS), 32);
+    setProperty("DBG_TAR", messages[0].address, 32);
 
     /* Dummy read to avoid the register getting stuck on Bay Trail */
     readRegister(DW_IC_ENABLE_STATUS);
@@ -802,6 +808,7 @@ void VoodooI2CControllerDriver::transferMessageToBus() {
                 receive_limit--;
                 bus_device.receive_outstanding++;
             } else {
+                setProperty("DBG_DATA_CMD", command | *buffer, 32);
                 writeRegister(command | *buffer++, DW_IC_DATA_CMD);
             }
             transaction_limit--; buffer_length--;
