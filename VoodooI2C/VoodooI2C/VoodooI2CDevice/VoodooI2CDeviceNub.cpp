@@ -490,24 +490,24 @@ IOReturn VoodooI2CDeviceNub::transferI2CToAddress(VoodooI2CAddressedTransfer *re
         VoodooI2CControllerBusMessage msgs[] = {
             {
                 .address = request->address,
-                .buffer = request->writeBuffer,
                 .flags = flags,
                 .length = request->writeLength,
+                .buffer = request->writeBuffer,
             },
             {
                 .address = request->address,
-                .buffer = request->readBuffer,
                 .flags = readFlags,
                 .length = request->readLength,
+                .buffer = request->readBuffer,
             }
         };
         ret = controller->transferI2C(msgs, 2);
     } else {
         VoodooI2CControllerBusMessage msg = {
             .address = request->address,
-            .buffer = hasWrite ? request->writeBuffer : request->readBuffer,
             .flags = hasWrite ? flags : readFlags,
             .length = hasWrite ? request->writeLength : request->readLength,
+            .buffer = hasWrite ? request->writeBuffer : request->readBuffer,
         };
         ret = controller->transferI2C(&msg, 1);
     }

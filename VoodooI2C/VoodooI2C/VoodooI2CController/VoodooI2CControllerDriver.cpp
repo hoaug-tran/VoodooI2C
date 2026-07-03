@@ -352,17 +352,21 @@ IOReturn VoodooI2CControllerDriver::prepareTransferI2C(VoodooI2CControllerBusMes
      */
     toggleBusState(kVoodooI2CStateOff);
 
-    if (bus_device.message_error)
+    if (bus_device.message_error) {
+        setProperty("VoodooI2C_Driver_prepare_MsgErr", bus_device.message_error, 32);
         return kIOReturnError;
+    }
 
     if (!bus_device.command_error)
         return kIOReturnSuccess;
 
     if (bus_device.command_error == DW_IC_ERR_TX_ABRT) {
+        setProperty("VoodooI2C_Driver_prepare_AbortSource", bus_device.abort_source, 32);
         handleAbortI2C();
         return kIOReturnError;
     }
 
+    setProperty("VoodooI2C_Driver_prepare_CmdErr", bus_device.command_error, 32);
     return kIOReturnNotReady;
 }
 
@@ -720,14 +724,6 @@ IOReturn VoodooI2CControllerDriver::transferI2C(VoodooI2CControllerBusMessage* m
     }
     IOLockLock(i2c_bus_lock);
     IOReturn ret = command_gate->runAction(OSMemberFunctionCast(IOCommandGate::Action, this, &VoodooI2CControllerDriver::transferI2CGated), messages, &number);
-    
-    // Fallback: If runAction rejected the execution (e.g. kIOReturnUnsupportedMode or other context errors)
-    if (ret != kIOReturnSuccess && ret != kIOReturnNotReady && ret != kIOReturnBusy && ret != kIOReturnTimeout && ret != kIOReturnError) {
-        setProperty("VoodooI2C_Driver_transferI2C_RunActionFailed", (uint64_t)ret, 64);
-        ret = transferI2CGated(messages, &number);
-        setProperty("VoodooI2C_Driver_transferI2C_DirectFallbackUsed", kOSBooleanTrue);
-    }
-    
     IOLockUnlock(i2c_bus_lock);
     setProperty("VoodooI2C_Driver_transferI2C_Ret", (uint64_t)ret, 64);
     return ret;
