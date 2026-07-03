@@ -209,6 +209,13 @@ class EXPORT VoodooI2CDeviceNub : public IOService {
                                   void *param3,
                                   void *param4) override;
 
+    IOReturn callPlatformFunction(const char *functionName,
+                                  bool waitForFunction,
+                                  void *param1,
+                                  void *param2,
+                                  void *param3,
+                                  void *param4) override;
+
  private:
     IOACPIPlatformDevice* acpi_device;
     IOCommandGate* command_gate;

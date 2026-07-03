@@ -426,15 +426,46 @@ IOReturn VoodooI2CDeviceNub::callPlatformFunction(const OSSymbol *functionName,
                                                   void *param2,
                                                   void *param3,
                                                   void *param4) {
+    if (functionName) {
+        setProperty("VoodooI2C_LastCallPlatformName", functionName->getCStringNoCopy());
+    }
+
     if (functionName && functionName->isEqualTo(VOODOO_I2C_TRANSFER_TO_ADDRESS)) {
+        setProperty("VoodooI2C_TransferMatched", kOSBooleanTrue);
         return transferI2CToAddress(static_cast<VoodooI2CAddressedTransfer *>(param1));
     }
 
     return super::callPlatformFunction(functionName, waitForFunction, param1, param2, param3, param4);
 }
 
+IOReturn VoodooI2CDeviceNub::callPlatformFunction(const char *functionName,
+                                                  bool waitForFunction,
+                                                  void *param1,
+                                                  void *param2,
+                                                  void *param3,
+                                                  void *param4) {
+    if (functionName) {
+        setProperty("VoodooI2C_LastCallPlatformName_Char", functionName);
+    }
+    
+    const OSSymbol *sym = OSSymbol::withCString(functionName);
+    IOReturn ret = kIOReturnUnsupported;
+    
+    if (sym) {
+        ret = callPlatformFunction(sym, waitForFunction, param1, param2, param3, param4);
+        sym->release();
+    } else {
+        ret = super::callPlatformFunction(functionName, waitForFunction, param1, param2, param3, param4);
+    }
+    
+    return ret;
+}
+
 IOReturn VoodooI2CDeviceNub::transferI2CToAddress(VoodooI2CAddressedTransfer *request) {
+    setProperty("VoodooI2C_EnteredTransfer", kOSBooleanTrue);
+
     if (!request || request->address > 0x7F) {
+        setProperty("VoodooI2C_TransferFailReason", "BadArgument_Address");
         return kIOReturnBadArgument;
     }
 
@@ -442,11 +473,18 @@ IOReturn VoodooI2CDeviceNub::transferI2CToAddress(VoodooI2CAddressedTransfer *re
     bool hasRead = request->readBuffer && request->readLength > 0;
 
     if (!hasWrite && !hasRead) {
+        setProperty("VoodooI2C_TransferFailReason", "BadArgument_NoBuffer");
         return kIOReturnBadArgument;
+    }
+
+    setProperty("VoodooI2C_ControllerPresent", controller ? kOSBooleanTrue : kOSBooleanFalse);
+    if (!controller) {
+        return kIOReturnNotReady;
     }
 
     UInt16 flags = use_10bit_addressing ? I2C_M_TEN : 0;
     UInt16 readFlags = flags | I2C_M_RD;
+    IOReturn ret = kIOReturnError;
 
     if (hasWrite && hasRead) {
         VoodooI2CControllerBusMessage msgs[] = {
@@ -463,16 +501,18 @@ IOReturn VoodooI2CDeviceNub::transferI2CToAddress(VoodooI2CAddressedTransfer *re
                 .length = request->readLength,
             }
         };
-        return controller->transferI2C(msgs, 2);
+        ret = controller->transferI2C(msgs, 2);
+    } else {
+        VoodooI2CControllerBusMessage msg = {
+            .address = request->address,
+            .buffer = hasWrite ? request->writeBuffer : request->readBuffer,
+            .flags = hasWrite ? flags : readFlags,
+            .length = hasWrite ? request->writeLength : request->readLength,
+        };
+        ret = controller->transferI2C(&msg, 1);
     }
 
-    VoodooI2CControllerBusMessage msg = {
-        .address = request->address,
-        .buffer = hasWrite ? request->writeBuffer : request->readBuffer,
-        .flags = hasWrite ? flags : readFlags,
-        .length = hasWrite ? request->writeLength : request->readLength,
-    };
-
-    return controller->transferI2C(&msg, 1);
+    setProperty("VoodooI2C_TransferRet", (uint64_t)ret, 32);
+    return ret;
 }
 
