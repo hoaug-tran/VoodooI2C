@@ -1,0 +1,96 @@
+name: Build VoodooI2C Kext
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 500
+
+      - name: Checkout MacKernelSDK
+        uses: actions/checkout@v4
+        with:
+          repository: acidanthera/MacKernelSDK
+          path: MacKernelSDK
+
+      - name: CI Bootstrap
+        run: |
+          src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/ocbuild/master/ci-bootstrap.sh) && eval "$src" || exit 1
+
+      - name: VoodooInput Bootstrap
+        run: |
+          src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/VoodooInput/master/VoodooInput/Scripts/bootstrap.sh) && eval "$src" && mv VoodooInput Dependencies
+
+      - name: Show workspace
+        run: |
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          echo "PWD=$(pwd)"
+          echo "Root contents"
+          ls -la
+          echo "Xcode workspace"
+          ls -la VoodooI2C.xcworkspace/ || echo "not found"
+
+      - name: Xcode version
+        run: xcodebuild -version
+
+      - name: List targets
+        run: xcodebuild -workspace VoodooI2C.xcworkspace -list
+
+      - name: Build release kext
+        run: |
+          xcodebuild \
+            -workspace VoodooI2C.xcworkspace \
+            -scheme VoodooI2C \
+            -configuration Release \
+            -sdk macosx \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            CONFIGURATION_BUILD_DIR="${GITHUB_WORKSPACE}/build/Release" \
+            build
+
+      - name: Verify kext
+        run: |
+          echo "Build output"
+          ls -la build/Release/
+          echo "Kext contents"
+          ls -la build/Release/VoodooI2C.kext/Contents/ || true
+          echo "Binary arch"
+          file build/Release/VoodooI2C.kext/Contents/MacOS/VoodooI2C || true
+          echo "Min OS version"
+          otool -l build/Release/VoodooI2C.kext/Contents/MacOS/VoodooI2C \
+            | grep -A3 "LC_VERSION_MIN\|LC_BUILD_VERSION" || true
+
+      - name: Package kext
+        run: |
+          cd build/Release
+          zip -r VoodooI2C.zip *.kext
+          du -sh VoodooI2C.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoodooI2C-${{ github.sha }}
+          path: build/Release/VoodooI2C.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Build summary
+        run: |
+          echo "Build successful"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "macOS: $(sw_vers -productVersion)"
+          echo "Xcode: $(xcodebuild -version | head -1)"
