@@ -713,22 +713,31 @@ void VoodooI2CControllerDriver::toggleInterrupts(VoodooI2CState enabled) {
 }
 
 IOReturn VoodooI2CControllerDriver::transferI2C(VoodooI2CControllerBusMessage* messages, int number) {
+    setProperty("VoodooI2C_Driver_transferI2C_Entered", kOSBooleanTrue);
+    if (!command_gate) {
+        setProperty("VoodooI2C_Driver_transferI2C_Fail", "NoCommandGate");
+        return kIOReturnNotReady;
+    }
     IOLockLock(i2c_bus_lock);
     IOReturn ret = command_gate->runAction(OSMemberFunctionCast(IOCommandGate::Action, this, &VoodooI2CControllerDriver::transferI2CGated), messages, &number);
     IOLockUnlock(i2c_bus_lock);
+    setProperty("VoodooI2C_Driver_transferI2C_Ret", (uint64_t)ret, 64);
     return ret;
 }
 
 IOReturn VoodooI2CControllerDriver::transferI2CGated(VoodooI2CControllerBusMessage* messages, int* number) {
+    setProperty("VoodooI2C_Driver_transferI2CGated_Entered", kOSBooleanTrue);
     IOReturn ret;
     int tries;
 
     for (ret = 0, tries = 0; tries <= 5; tries++) {
         ret = prepareTransferI2C(messages, number);
+        setProperty("VoodooI2C_Driver_prepareTransfer_Ret", (uint64_t)ret, 64);
         if (ret != kIOReturnNotReady)
             break;
     }
 
+    setProperty("VoodooI2C_Driver_transferI2CGated_Ret", (uint64_t)ret, 64);
     return ret;
 }
 
