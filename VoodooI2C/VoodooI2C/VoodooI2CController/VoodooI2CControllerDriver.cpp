@@ -356,7 +356,6 @@ IOReturn VoodooI2CControllerDriver::prepareTransferI2C(VoodooI2CControllerBusMes
     toggleBusState(kVoodooI2CStateOff);
 
     if (bus_device.message_error) {
-        setProperty("VoodooI2C_Driver_prepare_MsgErr", bus_device.message_error, 32);
         return kIOReturnError;
     }
 
@@ -364,12 +363,10 @@ IOReturn VoodooI2CControllerDriver::prepareTransferI2C(VoodooI2CControllerBusMes
         return kIOReturnSuccess;
 
     if (bus_device.command_error == DW_IC_ERR_TX_ABRT) {
-        setProperty("VoodooI2C_Driver_prepare_AbortSource", bus_device.abort_source, 32);
         handleAbortI2C();
         return kIOReturnError;
     }
 
-    setProperty("VoodooI2C_Driver_prepare_CmdErr", bus_device.command_error, 32);
     return kIOReturnNotReady;
 }
 
@@ -725,28 +722,21 @@ void VoodooI2CControllerDriver::toggleInterrupts(VoodooI2CState enabled) {
 }
 
 IOReturn VoodooI2CControllerDriver::transferI2C(VoodooI2CControllerBusMessage* messages, int number) {
-    setProperty("VoodooI2C_Driver_transferI2C_Entered", kOSBooleanTrue);
     if (!command_gate) {
-        setProperty("VoodooI2C_Driver_transferI2C_Fail", "NoCommandGate");
         return kIOReturnNotReady;
     }
-    IOLog("%s::%s VoodooI2C transferI2C entered\n", getName(), bus_device.name);
     IOLockLock(i2c_bus_lock);
     IOReturn ret = command_gate->runAction(OSMemberFunctionCast(IOCommandGate::Action, this, &VoodooI2CControllerDriver::transferI2CGated), messages, &number);
     IOLockUnlock(i2c_bus_lock);
-    setProperty("VoodooI2C_Driver_transferI2C_Ret", (uint64_t)ret, 64);
     return ret;
 }
 
 IOReturn VoodooI2CControllerDriver::transferI2CGated(VoodooI2CControllerBusMessage* messages, int* number) {
-    setProperty("VoodooI2C_Driver_transferI2CGated_Entered", kOSBooleanTrue);
-    IOLog("%s::%s transferI2CGated entered\n", getName(), bus_device.name);
     IOReturn ret;
     int tries;
 
     for (ret = 0, tries = 0; tries <= 5; tries++) {
         ret = prepareTransferI2C(messages, number);
-        setProperty("VoodooI2C_Driver_prepareTransfer_Ret", (uint64_t)ret, 64);
         if (ret != kIOReturnNotReady)
             break;
     }
