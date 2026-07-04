@@ -463,11 +463,7 @@ IOReturn VoodooI2CDeviceNub::callPlatformFunction(const char *functionName,
 }
 
 IOReturn VoodooI2CDeviceNub::transferI2CToAddress(VoodooI2CAddressedTransfer *request) {
-    IOLog("%s::transferI2CToAddress entered for address 0x%02X\n", getName(), request ? request->address : 0);
-    setProperty("VoodooI2C_EnteredTransfer", kOSBooleanTrue);
-
     if (!request || request->address > 0x7F) {
-        setProperty("VoodooI2C_TransferFailReason", "BadArgument_Address");
         return kIOReturnBadArgument;
     }
 
@@ -475,11 +471,9 @@ IOReturn VoodooI2CDeviceNub::transferI2CToAddress(VoodooI2CAddressedTransfer *re
     bool hasRead = request->readBuffer && request->readLength > 0;
 
     if (!hasWrite && !hasRead) {
-        setProperty("VoodooI2C_TransferFailReason", "BadArgument_NoBuffer");
         return kIOReturnBadArgument;
     }
 
-    setProperty("VoodooI2C_ControllerPresent", controller ? kOSBooleanTrue : kOSBooleanFalse);
     if (!controller) {
         return kIOReturnNotReady;
     }
@@ -514,7 +508,6 @@ IOReturn VoodooI2CDeviceNub::transferI2CToAddress(VoodooI2CAddressedTransfer *re
         ret = controller->transferI2C(&msg, 1);
     }
 
-    setProperty("VoodooI2C_TransferRet", (uint64_t)ret, 32);
     return ret;
 }
 
